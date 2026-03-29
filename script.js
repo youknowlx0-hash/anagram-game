@@ -10,57 +10,102 @@ let selected = [];
 
 let level = 0;
 let coins = 0;
-let hintUsed = 0;
 let levels = [];
+let foundWords = [];
+let dictionary = [];
 
-// LOAD LEVELS
-fetch("levels.json")
+// LOAD WORDS
+fetch("words.json")
 .then(res => res.json())
 .then(data => {
-  levels = data;
-  loadProgress();
+  dictionary = data;
+  levels = generateLevels(); // 🔥 1000 levels auto
   loadLevel();
 });
 
-// SAVE / LOAD
-function loadProgress() {
-  level = parseInt(localStorage.getItem("level")) || 0;
-  coins = parseInt(localStorage.getItem("coins")) || 0;
-  updateUI();
+// GENERATE LEVELS
+function generateLevels() {
+  let levels = [];
+
+  while (levels.length < 1000) {
+    let baseWord = getRandomWord(5, 7);
+    let letters = baseWord.split('');
+
+    let possible = findWordsFromLetters(letters);
+
+    if (possible.length >= 3) {
+      levels.push({
+        letters: shuffle(letters).join(''),
+        answers: possible.slice(0, 4)
+      });
+    }
+  }
+
+  return levels;
 }
 
-function saveProgress() {
-  localStorage.setItem("level", level);
-  localStorage.setItem("coins", coins);
+function getRandomWord(min, max) {
+  let words = dictionary.filter(w => w.length >= min && w.length <= max);
+  return words[Math.floor(Math.random() * words.length)];
+}
+
+function findWordsFromLetters(letters) {
+  return dictionary.filter(word => {
+    let temp = letters.slice();
+    for (let l of word) {
+      let index = temp.indexOf(l);
+      if (index === -1) return false;
+      temp.splice(index, 1);
+    }
+    return true;
+  });
+}
+
+function shuffle(arr) {
+  return arr.sort(() => 0.5 - Math.random());
 }
 
 // LOAD LEVEL
 function loadLevel() {
   currentWord = "";
   selected = [];
-  hintUsed = 0;
+  foundWords = [];
 
-  let word = levels[level].word;
+  let levelData = levels[level];
 
   document.getElementById("level").innerText = "Level " + (level + 1);
-  document.getElementById("word-box").innerText = "";
+  document.getElementById("coins").innerText = "Coins: " + coins;
 
-  drawLetters(word);
+  drawLetters(levelData.letters);
+  drawBlanks(levelData.answers);
 }
 
-// DRAW LETTERS IN CIRCLE
-function drawLetters(word) {
+// DRAW BLANKS
+function drawBlanks(words) {
+  let box = document.getElementById("word-box");
+  box.innerHTML = "";
+
+  words.forEach(w => {
+    let div = document.createElement("div");
+    div.innerText = "_ ".repeat(w.length);
+    div.id = "word-" + w;
+    box.appendChild(div);
+  });
+}
+
+// DRAW LETTERS
+function drawLetters(letters) {
   ctx.clearRect(0, 0, 300, 300);
   positions = [];
 
-  let letters = word.split('').sort(() => 0.5 - Math.random());
+  let arr = letters.split('');
 
   let centerX = 150;
   let centerY = 150;
   let radius = 100;
 
-  letters.forEach((letter, i) => {
-    let angle = (i / letters.length) * Math.PI * 2;
+  arr.forEach((letter, i) => {
+    let angle = (i / arr.length) * Math.PI * 2;
     let x = centerX + radius * Math.cos(angle);
     let y = centerY + radius * Math.sin(angle);
 
@@ -72,18 +117,16 @@ function drawLetters(word) {
     ctx.fill();
 
     ctx.fillStyle = "white";
-    ctx.font = "18px Arial";
     ctx.fillText(letter, x - 5, y + 5);
   });
 }
 
-// SWIPE START
+// TOUCH CONTROLS
 canvas.addEventListener("touchstart", () => {
   currentWord = "";
   selected = [];
 });
 
-// SWIPE MOVE
 canvas.addEventListener("touchmove", (e) => {
   let rect = canvas.getBoundingClientRect();
   let touch = e.touches[0];
@@ -97,72 +140,47 @@ canvas.addEventListener("touchmove", (e) => {
     if (dist < 25 && !selected.includes(p)) {
       selected.push(p);
       currentWord += p.letter;
-      updateWord();
     }
   });
-
-  drawLines();
 });
 
-// DRAW LINE BETWEEN LETTERS
-function drawLines() {
-  ctx.clearRect(0, 0, 300, 300);
-
-  // redraw letters
-  drawLetters(levels[level].word);
-
-  ctx.beginPath();
-  ctx.strokeStyle = "yellow";
-  ctx.lineWidth = 3;
-
-  selected.forEach((p, i) => {
-    if (i === 0) ctx.moveTo(p.x, p.y);
-    else ctx.lineTo(p.x, p.y);
-  });
-
-  ctx.stroke();
-}
-
-// UPDATE WORD
-function updateWord() {
-  document.getElementById("word-box").innerText = currentWord;
-}
-
-// SUBMIT
+// BUTTONS
 function submitWord() {
-  let correct = levels[level].word;
+  let answers = levels[level].answers;
 
-  if (currentWord === correct) {
-    coins += 20;
-    level++;
-    saveProgress();
-    alert("🎉 Correct!");
-    loadLevel();
+  if (answers.includes(currentWord) && !foundWords.includes(currentWord)) {
+    foundWords.push(currentWord);
+
+    document.getElementById("word-" + currentWord).innerText = currentWord;
+
+    coins += 10;
+
+    if (foundWords.length === answers.length) {
+      alert("🎉 Level Complete!");
+      level++;
+      loadLevel();
+    }
+
   } else {
     alert("❌ Wrong!");
   }
+
+  currentWord = "";
+  selected = [];
 }
 
-// CLEAR
 function clearWord() {
   currentWord = "";
   selected = [];
-  updateWord();
-  drawLetters(levels[level].word);
 }
 
-// HINT (AD STYLE)
 function showHint() {
-  let word = levels[level].word;
+  let answers = levels[level].answers;
 
-  alert("Ad Playing 🎥");
-  hintUsed++;
-
-  currentWord = word.substring(0, hintUsed);
-  updateWord();
-}
-
-// UI UPDATE
-function updateUI() {
-  document.getElementById("coins").innerText = "Coins: " + coins;
-}
+  for (let w of answers) {
+    if (!foundWords.includes(w)) {
+      alert("Hint: " + w[0]);
+      break;
+    }
+  }
+                    }
