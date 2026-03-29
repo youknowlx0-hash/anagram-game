@@ -1,13 +1,15 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Word Swipe Game</title>
+  <title>Word Swipe Pro</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <h2 id="level">Level 1</h2>
 <h3 id="coins">Coins: 0</h3>
+
+<h2 id="currentWord"></h2>
 
 <div id="word-box"></div>
 
@@ -17,7 +19,15 @@
   <button onclick="submitWord()">Submit</button>
   <button onclick="clearWord()">Clear</button>
   <button onclick="showHint()">Hint</button>
+  <button onclick="shuffleLetters()">Shuffle</button>
 </div>
+
+<audio id="correctSound" src="https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3"></audio>
+<audio id="wrongSound" src="https://assets.mixkit.co/active_storage/sfx/2003/2003-preview.mp3"></audio>
+
+<audio autoplay loop>
+  <source src="https://assets.mixkit.co/music/preview/mixkit-game-level-music-689.mp3">
+</audio>
 
 <script src="script.js"></script>
 
