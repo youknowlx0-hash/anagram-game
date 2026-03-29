@@ -1,16 +1,30 @@
 body {
   text-align: center;
   font-family: Arial;
-  background: linear-gradient(#4facfe, #00f2fe);
+  background: #121212;
   color: white;
 }
 
-#word-box {
-  font-size: 30px;
-  margin: 20px;
+canvas {
+  margin-top: 20px;
+  background: #1e1e1e;
+  border-radius: 10px;
 }
 
-canvas {
-  background: #1e1e1e;
-  border-radius: 50%;
+#word-box {
+  margin-top: 20px;
+}
+
+#word-box div {
+  font-size: 22px;
+  margin: 5px;
+}
+
+button {
+  margin: 10px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  background: #00c3ff;
+  color: white;
 }
