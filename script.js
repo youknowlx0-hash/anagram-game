@@ -14,12 +14,15 @@ let levels = [];
 let foundWords = [];
 let dictionary = [];
 
+let correctSound = document.getElementById("correctSound");
+let wrongSound = document.getElementById("wrongSound");
+
 // LOAD WORDS
 fetch("words.json")
 .then(res => res.json())
 .then(data => {
   dictionary = data;
-  levels = generateLevels(); // 🔥 1000 levels auto
+  levels = generateLevels();
   loadLevel();
 });
 
@@ -40,7 +43,6 @@ function generateLevels() {
       });
     }
   }
-
   return levels;
 }
 
@@ -53,9 +55,9 @@ function findWordsFromLetters(letters) {
   return dictionary.filter(word => {
     let temp = letters.slice();
     for (let l of word) {
-      let index = temp.indexOf(l);
-      if (index === -1) return false;
-      temp.splice(index, 1);
+      let i = temp.indexOf(l);
+      if (i === -1) return false;
+      temp.splice(i, 1);
     }
     return true;
   });
@@ -71,13 +73,13 @@ function loadLevel() {
   selected = [];
   foundWords = [];
 
-  let levelData = levels[level];
+  let data = levels[level];
 
   document.getElementById("level").innerText = "Level " + (level + 1);
   document.getElementById("coins").innerText = "Coins: " + coins;
 
-  drawLetters(levelData.letters);
-  drawBlanks(levelData.answers);
+  drawLetters(data.letters);
+  drawBlanks(data.answers);
 }
 
 // DRAW BLANKS
@@ -86,10 +88,10 @@ function drawBlanks(words) {
   box.innerHTML = "";
 
   words.forEach(w => {
-    let div = document.createElement("div");
-    div.innerText = "_ ".repeat(w.length);
-    div.id = "word-" + w;
-    box.appendChild(div);
+    let d = document.createElement("div");
+    d.innerText = "_ ".repeat(w.length);
+    d.id = "word-" + w;
+    box.appendChild(d);
   });
 }
 
@@ -99,17 +101,14 @@ function drawLetters(letters) {
   positions = [];
 
   let arr = letters.split('');
+  let cx = 150, cy = 150, r = 100;
 
-  let centerX = 150;
-  let centerY = 150;
-  let radius = 100;
+  arr.forEach((l, i) => {
+    let a = (i / arr.length) * Math.PI * 2;
+    let x = cx + r * Math.cos(a);
+    let y = cy + r * Math.sin(a);
 
-  arr.forEach((letter, i) => {
-    let angle = (i / arr.length) * Math.PI * 2;
-    let x = centerX + radius * Math.cos(angle);
-    let y = centerY + radius * Math.sin(angle);
-
-    positions.push({x, y, letter});
+    positions.push({x, y, letter: l});
 
     ctx.beginPath();
     ctx.arc(x, y, 22, 0, Math.PI * 2);
@@ -117,11 +116,11 @@ function drawLetters(letters) {
     ctx.fill();
 
     ctx.fillStyle = "white";
-    ctx.fillText(letter, x - 5, y + 5);
+    ctx.fillText(l, x - 5, y + 5);
   });
 }
 
-// TOUCH CONTROLS
+// TOUCH
 canvas.addEventListener("touchstart", () => {
   currentWord = "";
   selected = [];
@@ -129,58 +128,90 @@ canvas.addEventListener("touchstart", () => {
 
 canvas.addEventListener("touchmove", (e) => {
   let rect = canvas.getBoundingClientRect();
-  let touch = e.touches[0];
+  let t = e.touches[0];
 
-  let x = touch.clientX - rect.left;
-  let y = touch.clientY - rect.top;
+  let x = t.clientX - rect.left;
+  let y = t.clientY - rect.top;
+
+  ctx.clearRect(0, 0, 300, 300);
+  drawLetters(levels[level].letters);
+
+  ctx.beginPath();
 
   positions.forEach(p => {
-    let dist = Math.hypot(p.x - x, p.y - y);
+    let d = Math.hypot(p.x - x, p.y - y);
 
-    if (dist < 25 && !selected.includes(p)) {
+    if (d < 25 && !selected.includes(p)) {
       selected.push(p);
       currentWord += p.letter;
     }
   });
+
+  selected.forEach((p, i) => {
+    if (i === 0) ctx.moveTo(p.x, p.y);
+    else ctx.lineTo(p.x, p.y);
+  });
+
+  ctx.strokeStyle = "#00ffcc";
+  ctx.lineWidth = 5;
+  ctx.stroke();
+
+  document.getElementById("currentWord").innerText = currentWord;
 });
 
-// BUTTONS
+// SUBMIT
 function submitWord() {
-  let answers = levels[level].answers;
+  let ans = levels[level].answers;
 
-  if (answers.includes(currentWord) && !foundWords.includes(currentWord)) {
+  if (ans.includes(currentWord) && !foundWords.includes(currentWord)) {
+    correctSound.play();
+    navigator.vibrate([50, 30, 50]);
+
     foundWords.push(currentWord);
 
-    document.getElementById("word-" + currentWord).innerText = currentWord;
+    let el = document.getElementById("word-" + currentWord);
+    el.innerText = currentWord;
+    el.style.color = "#00ff99";
+    el.style.transform = "scale(1.3)";
+    setTimeout(() => el.style.transform = "scale(1)", 300);
 
     coins += 10;
 
-    if (foundWords.length === answers.length) {
-      alert("🎉 Level Complete!");
-      level++;
-      loadLevel();
+    if (foundWords.length === ans.length) {
+      setTimeout(() => {
+        alert("🔥 Level Complete!");
+        level++;
+        loadLevel();
+      }, 300);
     }
 
   } else {
+    wrongSound.play();
     alert("❌ Wrong!");
   }
 
   currentWord = "";
   selected = [];
+  document.getElementById("currentWord").innerText = "";
 }
 
+// BUTTONS
 function clearWord() {
   currentWord = "";
   selected = [];
+  document.getElementById("currentWord").innerText = "";
 }
 
 function showHint() {
-  let answers = levels[level].answers;
-
-  for (let w of answers) {
+  let ans = levels[level].answers;
+  for (let w of ans) {
     if (!foundWords.includes(w)) {
       alert("Hint: " + w[0]);
       break;
     }
   }
-                    }
+}
+
+function shuffleLetters() {
+  drawLetters(levels[level].letters.split('').sort(() => 0.5 - Math.random()).join(''));
+                     }
